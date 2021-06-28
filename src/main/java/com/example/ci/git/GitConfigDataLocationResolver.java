@@ -1,41 +1,21 @@
 package com.example.ci.git;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 
-import org.springframework.boot.BootstrapContext;
+import com.alibaba.nacos.api.NacosFactory;
+import com.alibaba.nacos.api.config.ConfigService;
+import com.alibaba.nacos.api.exception.NacosException;
 import org.springframework.boot.context.config.ConfigDataLocation;
-import org.springframework.boot.context.config.ConfigDataLocationBindHandler;
 import org.springframework.boot.context.config.ConfigDataLocationNotFoundException;
 import org.springframework.boot.context.config.ConfigDataLocationResolver;
 import org.springframework.boot.context.config.ConfigDataLocationResolverContext;
-import org.springframework.boot.context.config.ConfigDataProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.util.ObjectUtils;
 
-@EnableConfigurationProperties({GitConfigProperties.class})
 public class GitConfigDataLocationResolver implements ConfigDataLocationResolver<GitConfigDataResource> {
 
-    private static final String PREFIX = "git:";
-    private final GitConfigProperties properties;
-
-    public GitConfigDataLocationResolver( Binder binder) {
-        this.properties = new GitConfigProperties();
-        ConfigDataProperties.LegacyProfilesBindHandler legacyProfilesBindHandler = new ConfigDataProperties.LegacyProfilesBindHandler();
-        String[] legacyProfiles = binder.bind(LEGACY_PROFILES_NAME, BINDABLE_STRING_ARRAY, legacyProfilesBindHandler)
-                .orElse(null);
-        ConfigDataProperties properties = binder.bind(NAME, BINDABLE_PROPERTIES, new ConfigDataLocationBindHandler())
-                .orElse(null);
-        if (!ObjectUtils.isEmpty(legacyProfiles)) {
-            properties = (properties != null)
-                    ? properties.withLegacyProfiles(legacyProfiles, legacyProfilesBindHandler.getProperty())
-                    : new ConfigDataProperties(null, new ConfigDataProperties.Activate(null, legacyProfiles));
-        }
-        return properties;
-    }
+    private static final String PREFIX = "nacos:";
 
     @Override
     public boolean isResolvable(ConfigDataLocationResolverContext context, ConfigDataLocation location) {
@@ -47,12 +27,16 @@ public class GitConfigDataLocationResolver implements ConfigDataLocationResolver
                                                ConfigDataLocation location) {
         try {
             return resolve(location.getNonPrefixedValue(PREFIX));
-        } catch (IOException ex) {
+        } catch (IOException | NacosException ex) {
             throw new ConfigDataLocationNotFoundException(location, ex);
         }
     }
 
-    private List<GitConfigDataResource> resolve(String location) throws IOException {
-        return Collections.singletonList(new GitConfigDataResource(location, properties));
+    private List<GitConfigDataResource> resolve(String location) throws IOException, NacosException {
+        URL url = new URL(location);
+        //参考nacos F12 获取配置
+        //登陆接口：http://192.168.100.1:8848/nacos/v1/auth/users/login
+        //获取配置接口：http://192.168.100.1:8848/nacos/v1/cs/configs?dataId=extenddata.yml&group=DEFAULT_GROUP&namespaceId=21e60c4d-9fb5-4d46-8359-b9cd94a138e7&tenant=21e60c4d-9fb5-4d46-8359-b9cd94a138e7&show=all&accessToken=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6MTYyNDkxNjU1MX0.cfyFVgKRaEYL6icF_JRO2J1oI-eoP3Xw_nZ5GbdFbcU
+        return Collections.singletonList(new GitConfigDataResource(location, new GitConfigProperties()));
     }
 }

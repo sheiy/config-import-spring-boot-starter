@@ -1,11 +1,6 @@
 package com.example.ci.git;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-@ConfigurationProperties(prefix = GitConfigProperties.PREFIX)
 public class GitConfigProperties {
-
-    public static final String PREFIX = "git.config";
 
     private String username;
 
