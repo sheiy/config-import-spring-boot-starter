@@ -1,6 +1,6 @@
-package com.example.ci.git;
+package com.example.ci.nacos;
 
-public class GitConfigProperties {
+public class NacosConfigProperties {
 
     private String username;
 
@@ -10,7 +10,7 @@ public class GitConfigProperties {
 
     private String path;
 
-    public GitConfigProperties() {
+    public NacosConfigProperties() {
     }
 
     public String getPath() {
