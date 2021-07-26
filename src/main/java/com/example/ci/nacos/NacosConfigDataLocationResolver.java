@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import org.springframework.boot.context.config.ConfigDataLocation;
 import org.springframework.boot.context.config.ConfigDataLocationNotFoundException;
 import org.springframework.boot.context.config.ConfigDataLocationResolver;
@@ -23,7 +23,7 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
     private static final String LOGIN_PATH = "/nacos/v1/auth/users/login";
     private static final String CONFIG_PATH = "/nacos/v1/cs/configs";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Gson GSON = new Gson();
 
     @Override
     public boolean isResolvable(ConfigDataLocationResolverContext context, ConfigDataLocation location) {
@@ -60,7 +60,7 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
             throw new RuntimeException(response.body());
         }
         //noinspection unchecked
-        Map<String, String> map = OBJECT_MAPPER.readValue(response.body(), Map.class);
+        Map<String, String> map = GSON.fromJson(response.body(), Map.class);
         if (!map.containsKey("accessToken")) {
             throw new RuntimeException("未获取到Nacos Token");
         }
@@ -74,7 +74,7 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
             throw new RuntimeException(response.body());
         }
         //noinspection unchecked
-        map = OBJECT_MAPPER.readValue(response.body(), Map.class);
+        map = GSON.fromJson(response.body(), Map.class);
         return Collections.singletonList(new NacosConfigDataResource(map.get("content")));
     }
 }
