@@ -1,4 +1,4 @@
-package com.example.ci.nacos;
+package com.github.sheiy.configimport.nacos;
 
 import java.nio.charset.StandardCharsets;
 

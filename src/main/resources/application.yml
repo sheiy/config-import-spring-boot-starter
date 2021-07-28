@@ -1,5 +1,0 @@
-spring:
-    config:
-        import:
-          - nacos:http://nacos:nacos@192.168.100.1:8848/21e60c4d-9fb5-4d46-8359-b9cd94a138e7/extenddata.yml
-          - nacos:http://nacos:nacos@192.168.100.1:8848/21e60c4d-9fb5-4d46-8359-b9cd94a138e7/common.yml
