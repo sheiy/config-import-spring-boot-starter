@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import org.springframework.boot.context.config.ConfigDataLocation;
@@ -23,6 +25,7 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
     private static final String CONFIG_PATH = "/nacos/v1/cs/configs";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
     private static final Gson GSON = new Gson();
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("\"accessToken\": (\"(.*?)\"|(\\d*))");
 
     @Override
     public boolean isResolvable(ConfigDataLocationResolverContext context, ConfigDataLocation location) {
@@ -43,10 +46,11 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
         URL url = new URL(location);
         String userInfo = url.getUserInfo();
         if (userInfo == null || userInfo.isBlank() || userInfo.split(":").length != 2) {
-            throw new RuntimeException("用户名或密码未配置，参考格式：【nacos:http://nacos:nacos@192.168.100.1:8848/21e60c4d-9fb5-4d46-8359-b9cd94a138e7/common.yml】");
+            throw new IllegalArgumentException("用户名或密码未配置，参考格式：【nacos:http://nacos:nacos@192.168.100.1:8848/21e60c4d-9fb5-4d46-8359-b9cd94a138e7/common.yml】");
         }
         String username = userInfo.split(":")[0];
         String password = userInfo.split(":")[1];
+        //不用在意使用+号拼接字符串，编译器会自动优化
         userInfo = "username=" + username + "&" + "password=" + password;
         String urlPrefix = url.getProtocol() + "://" + url.getHost() + ":" + url.getPort();
         URI loginUri = URI.create(urlPrefix + LOGIN_PATH);
@@ -56,21 +60,27 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
                 .build();
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
-            throw new RuntimeException(response.body());
+            throw new IllegalStateException(response.body());
         }
         //noinspection unchecked
         Map<String, String> map = GSON.fromJson(response.body(), Map.class);
         if (!map.containsKey("accessToken")) {
-            throw new RuntimeException("未获取到Nacos Token");
+            throw new IllegalArgumentException("未获取到Nacos Token");
         }
+        Matcher matcher = TOKEN_PATTERN.matcher(response.body());
+        if (!matcher.find()) {
+            throw new IllegalArgumentException("未获取到Nacos Token");
+        }
+        String token = matcher.group().split(":")[1].replace("\"", "").trim();
         String nameSpace = url.getPath().substring(1).split("/")[0];
         String dataId = url.getPath().substring(1).split("/")[1];
-        String query = "dataId=" + dataId + "&group=DEFAULT_GROUP" + "&namespaceId=" + nameSpace + "&tenant=" + nameSpace + "&show=all&accessToken=" + map.get("token") + "&username=" + username;
+        String query =String.format("dataId=%s&group=DEFAULT_GROUP&namespaceId=%s&tenant=%s&show=all&accessToken=%s&username=%s",
+                dataId,nameSpace,nameSpace,token,username);
         request = HttpRequest.newBuilder().uri(URI.create(urlPrefix + CONFIG_PATH + "?" + query)).GET().build();
 
         response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (response.statusCode() != 200) {
-            throw new RuntimeException(response.body());
+            throw new IllegalStateException(response.body());
         }
         //noinspection unchecked
         map = GSON.fromJson(response.body(), Map.class);
