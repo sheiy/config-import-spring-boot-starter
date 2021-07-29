@@ -25,7 +25,6 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
     private static final String CONFIG_PATH = "/nacos/v1/cs/configs";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
     private static final Gson GSON = new Gson();
-    private static final Pattern TOKEN_PATTERN = Pattern.compile("\"accessToken\": (\"(.*?)\"|(\\d*))");
 
     @Override
     public boolean isResolvable(ConfigDataLocationResolverContext context, ConfigDataLocation location) {
@@ -67,11 +66,7 @@ public class NacosConfigDataLocationResolver implements ConfigDataLocationResolv
         if (!map.containsKey("accessToken")) {
             throw new IllegalArgumentException("未获取到Nacos Token");
         }
-        Matcher matcher = TOKEN_PATTERN.matcher(response.body());
-        if (!matcher.find()) {
-            throw new IllegalArgumentException("未获取到Nacos Token");
-        }
-        String token = matcher.group().split(":")[1].replace("\"", "").trim();
+        String token = map.get("accessToken");
         String nameSpace = url.getPath().substring(1).split("/")[0];
         String dataId = url.getPath().substring(1).split("/")[1];
         String query =String.format("dataId=%s&group=DEFAULT_GROUP&namespaceId=%s&tenant=%s&show=all&accessToken=%s&username=%s",
